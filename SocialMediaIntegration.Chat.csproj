@@ -1,0 +1,29 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <!-- DPAPI Windows-only by design (lihat KeyStore.cs); native chat_xdk_ffi juga win-x64. -->
+    <NoWarn>$(NoWarn);CA1416</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="System.Security.Cryptography.ProtectedData" Version="8.0.0" />
+    <PackageReference Include="XDevPlatform.ChatXdk" Version="0.7.6" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Remove="crm-plugin-sample\**" />
+    <None Include="crm-plugin-sample\**" />
+    <None Include="crm-webresource\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="fixtures\sdk_vectors.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,715 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>X Chat &amp; Mention Inbox — BICARA CRM</title>
+  <style>
+    :root {
+      --bg: #f3f5f8;
+      --surface: #ffffff;
+      --border: #dfe4ec;
+      --text: #1c2430;
+      --muted: #64748b;
+      --primary: #0f4c81;
+      --primary-hover: #0b3a63;
+      --incoming: #eef2f7;
+      --outgoing: #0f4c81;
+      --outgoing-text: #ffffff;
+      --badge-e2ee: #dcfce7;
+      --badge-e2ee-text: #166534;
+      --badge-plain: #fef3c7;
+      --badge-plain-text: #92400e;
+      --danger: #dc2626;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif; color: var(--text); background: var(--bg); font-size: 13.5px; }
+    .app { display: flex; height: 100vh; overflow: hidden; }
+
+    /* Left Sidebar */
+    .sidebar { width: 340px; min-width: 280px; background: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; }
+    .sidebar-header { padding: 14px 16px; border-bottom: 1px solid var(--border); }
+    .brand { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+    .brand h1 { font-size: 16px; font-weight: 700; color: var(--primary); }
+    .tabs { display: flex; gap: 6px; margin-bottom: 10px; }
+    .tab { flex: 1; padding: 7px 10px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg); color: var(--muted); font-weight: 600; cursor: pointer; text-align: center; }
+    .tab.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+    .search-box { width: 100%; padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px; outline: none; font-size: 13px; }
+    .search-box:focus { border-color: var(--primary); }
+    .conv-list { flex: 1; overflow-y: auto; }
+    .conv-item { display: flex; gap: 10px; padding: 11px 14px; border-bottom: 1px solid #f1f5f9; cursor: pointer; align-items: center; }
+    .conv-item:hover { background: #f8fafc; }
+    .conv-item.active { background: #e8f1fa; border-left: 3px solid var(--primary); padding-left: 11px; }
+    .avatar { width: 38px; height: 38px; border-radius: 50%; background: var(--primary); color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 700; flex-shrink: 0; font-size: 14px; }
+    .conv-body { flex: 1; min-width: 0; }
+    .conv-top { display: flex; justify-content: space-between; align-items: baseline; gap: 6px; }
+    .conv-name { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .conv-time { font-size: 11px; color: var(--muted); flex-shrink: 0; }
+    .conv-sub { font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px; }
+    .conv-meta { display: flex; align-items: center; gap: 6px; margin-top: 4px; }
+
+    /* Badges & Buttons */
+    .badge { display: inline-block; font-size: 10.5px; font-weight: 600; padding: 1px 6px; border-radius: 999px; }
+    .badge-e2ee { background: var(--badge-e2ee); color: var(--badge-e2ee-text); }
+    .badge-plain { background: var(--badge-plain); color: var(--badge-plain-text); }
+    .badge-count { background: #e2e8f0; color: #334155; }
+    .btn { padding: 6px 11px; border: 1px solid var(--border); border-radius: 6px; background: var(--surface); color: var(--text); cursor: pointer; font-size: 12.5px; font-weight: 600; }
+    .btn:hover { background: #f1f5f9; }
+    .btn-primary { background: var(--primary); color: #fff; border-color: var(--primary); }
+    .btn-primary:hover { background: var(--primary-hover); }
+    .btn-primary:disabled { opacity: 0.55; cursor: not-allowed; }
+
+    /* Main Chat Area */
+    .main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+    .chat-header { padding: 12px 18px; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+    .chat-header-info h2 { font-size: 15px; font-weight: 700; }
+    .chat-header-info p { font-size: 12px; color: var(--muted); margin-top: 2px; }
+    .chat-actions { display: flex; align-items: center; gap: 8px; }
+    .messages { flex: 1; overflow-y: auto; padding: 18px 22px; display: flex; flex-direction: column; gap: 10px; }
+    .empty-state { margin: auto; text-align: center; color: var(--muted); max-width: 340px; line-height: 1.5; }
+
+    .msg-row { display: flex; flex-direction: column; max-width: 72%; }
+    .msg-row.in { align-self: flex-start; align-items: flex-start; }
+    .msg-row.out { align-self: flex-end; align-items: flex-end; }
+    .bubble { padding: 9px 13px; border-radius: 12px; line-height: 1.45; white-space: pre-wrap; word-break: break-word; }
+    .msg-row.in .bubble { background: var(--incoming); color: var(--text); border-bottom-left-radius: 3px; }
+    .msg-row.out .bubble { background: var(--outgoing); color: var(--outgoing-text); border-bottom-right-radius: 3px; }
+    .msg-meta { font-size: 11px; color: var(--muted); margin-top: 3px; display: flex; align-items: center; gap: 6px; }
+    .msg-meta a { color: var(--primary); text-decoration: none; }
+    .msg-meta a:hover { text-decoration: underline; }
+    .att-list { margin-top: 6px; display: flex; flex-wrap: wrap; gap: 6px; }
+    .att-img { max-width: 240px; max-height: 200px; border-radius: 8px; cursor: pointer; border: 1px solid rgba(0,0,0,0.08); display: block; }
+    .att-file { display: inline-flex; align-items: center; gap: 5px; padding: 5px 9px; border-radius: 6px; background: rgba(255,255,255,0.85); color: var(--primary); font-size: 12px; text-decoration: none; border: 1px solid var(--border); }
+
+    /* Composer */
+    .composer { padding: 12px 16px; background: var(--surface); border-top: 1px solid var(--border); }
+    .reply-context { font-size: 12px; color: var(--muted); margin-bottom: 6px; display: flex; align-items: center; justify-content: space-between; }
+    .file-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+    .chip { display: inline-flex; align-items: center; gap: 6px; background: #e8f1fa; color: var(--primary); padding: 4px 8px; border-radius: 999px; font-size: 12px; }
+    .chip button { border: none; background: transparent; color: var(--danger); cursor: pointer; font-weight: 700; }
+    .composer-row { display: flex; gap: 8px; align-items: flex-end; }
+    .composer textarea { flex: 1; resize: none; min-height: 40px; max-height: 120px; padding: 9px 11px; border: 1px solid var(--border); border-radius: 8px; font-family: inherit; font-size: 13.5px; outline: none; }
+    .composer textarea:focus { border-color: var(--primary); }
+    .status-bar { padding: 5px 14px; font-size: 11.5px; color: var(--muted); background: #f8fafc; border-top: 1px solid var(--border); display: flex; justify-content: space-between; }
+    .err-text { color: var(--danger); }
+
+    /* Modal Preview */
+    .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.72); display: none; align-items: center; justify-content: center; z-index: 999; padding: 24px; }
+    .modal.open { display: flex; }
+    .modal img { max-width: 92vw; max-height: 90vh; border-radius: 8px; box-shadow: 0 12px 36px rgba(0,0,0,0.45); }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <div class="brand">
+          <h1>X Chat Inbox</h1>
+          <button id="btnRefresh" class="btn" title="Muat ulang">Refresh</button>
+        </div>
+        <div class="tabs">
+          <button id="tabDm" class="tab active" type="button">Direct Messages</button>
+          <button id="tabMention" class="tab" type="button">Mentions</button>
+        </div>
+        <input id="searchInput" class="search-box" type="search" placeholder="Cari nama, @username, atau isi pesan..." />
+      </div>
+      <div id="convList" class="conv-list"></div>
+      <div class="status-bar">
+        <span id="statusText">Memuat data...</span>
+        <label style="cursor:pointer;"><input id="chkAuto" type="checkbox" checked /> Auto 15d</label>
+      </div>
+    </aside>
+
+    <main class="main">
+      <div id="chatHeader" class="chat-header" style="display:none;">
+        <div class="chat-header-info">
+          <h2 id="hdrName">-</h2>
+          <p id="hdrSub">-</p>
+        </div>
+        <div class="chat-actions">
+          <a id="hdrLink" class="btn" href="#" target="_blank" rel="noopener" style="display:none;text-decoration:none;">Buka di X</a>
+        </div>
+      </div>
+
+      <div id="messages" class="messages">
+        <div class="empty-state">
+          Pilih percakapan di panel sebelah kiri untuk melihat seluruh histori chat &amp; mengirim balasan.
+        </div>
+      </div>
+
+      <div id="composer" class="composer" style="display:none;">
+        <div id="replyContext" class="reply-context" style="display:none;"></div>
+        <div id="fileChips" class="file-chips"></div>
+        <div class="composer-row">
+          <input id="fileInput" type="file" multiple accept="image/*,.pdf,.txt,.mp4" style="display:none;" />
+          <button id="btnAttach" class="btn" type="button" title="Lampirkan gambar/file">Lampirkan</button>
+          <textarea id="txtReply" rows="1" placeholder="Ketik balasan... (Enter kirim, Shift+Enter baris baru)"></textarea>
+          <button id="btnSend" class="btn btn-primary" type="button">Kirim</button>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <div id="imgModal" class="modal" onclick="this.classList.remove('open')">
+    <img id="imgModalSrc" alt="Preview lampiran" />
+  </div>
+
+  <script>
+  (function () {
+    "use strict";
+
+    // Konfigurasi CRM (Dynamics 365 / CRM 9.0 Web API)
+    var DIRECTION_IN = 157570000;
+    var DIRECTION_OUT = 157570001;
+    var API_PATH = "/api/data/v9.0/";
+
+    var state = {
+      mode: "dm",          // "dm" | "mention"
+      records: [],         // semua record bi_twitter yang dimuat
+      conversations: [],   // daftar percakapan terkelompok
+      selectedKey: null,   // bi_userid terpilih
+      selectedReplyTweetId: null, // untuk balas mention spesifik
+      pendingFiles: [],    // File[] yang akan dilampirkan ke Notes
+      annotationsCache: {}, // activityid -> [{filename, mimetype, documentbody}]
+      sending: false,
+      timer: null
+    };
+
+    var el = {
+      tabDm: document.getElementById("tabDm"),
+      tabMention: document.getElementById("tabMention"),
+      search: document.getElementById("searchInput"),
+      convList: document.getElementById("convList"),
+      status: document.getElementById("statusText"),
+      chkAuto: document.getElementById("chkAuto"),
+      btnRefresh: document.getElementById("btnRefresh"),
+      chatHeader: document.getElementById("chatHeader"),
+      hdrName: document.getElementById("hdrName"),
+      hdrSub: document.getElementById("hdrSub"),
+      hdrLink: document.getElementById("hdrLink"),
+      messages: document.getElementById("messages"),
+      composer: document.getElementById("composer"),
+      replyContext: document.getElementById("replyContext"),
+      fileChips: document.getElementById("fileChips"),
+      fileInput: document.getElementById("fileInput"),
+      btnAttach: document.getElementById("btnAttach"),
+      txtReply: document.getElementById("txtReply"),
+      btnSend: document.getElementById("btnSend"),
+      imgModal: document.getElementById("imgModal"),
+      imgModalSrc: document.getElementById("imgModalSrc")
+    };
+
+    function getClientUrl() {
+      try {
+        if (window.Xrm && Xrm.Utility && Xrm.Utility.getGlobalContext) {
+          return Xrm.Utility.getGlobalContext().getClientUrl().replace(/\/+$/, "");
+        }
+        if (window.parent && window.parent.Xrm) {
+          if (window.parent.Xrm.Utility && window.parent.Xrm.Utility.getGlobalContext) {
+            return window.parent.Xrm.Utility.getGlobalContext().getClientUrl().replace(/\/+$/, "");
+          }
+          if (window.parent.Xrm.Page && window.parent.Xrm.Page.context) {
+            return window.parent.Xrm.Page.context.getClientUrl().replace(/\/+$/, "");
+          }
+        }
+      } catch (e) { /* fallback ke location */ }
+      // Fallback: ambil /{OrgName} dari path URL (mis. /BICARADEV/WebResources/...)
+      var parts = window.location.pathname.split("/").filter(Boolean);
+      var org = parts.length > 0 && parts[0].toLowerCase() !== "webresources" ? "/" + parts[0] : "";
+      return window.location.origin + org;
+    }
+
+    var BASE_API = getClientUrl() + API_PATH;
+
+    function apiFetch(path, opts) {
+      opts = opts || {};
+      opts.credentials = "same-origin";
+      opts.headers = Object.assign({
+        "Accept": "application/json",
+        "OData-MaxVersion": "4.0",
+        "OData-Version": "4.0"
+      }, opts.headers || {});
+      return fetch(BASE_API + path, opts).then(function (resp) {
+        if (!resp.ok) {
+          return resp.text().then(function (t) {
+            throw new Error("CRM " + resp.status + ": " + t.slice(0, 250));
+          });
+        }
+        if (resp.status === 204) return { headers: resp.headers, data: null };
+        return resp.json().then(function (data) { return { headers: resp.headers, data: data }; });
+      });
+    }
+
+    function setStatus(msg, isError) {
+      el.status.textContent = msg;
+      el.status.className = isError ? "err-text" : "";
+    }
+
+    function fmtTime(iso) {
+      if (!iso) return "";
+      var d = new Date(iso);
+      if (isNaN(d.getTime())) return iso;
+      return d.toLocaleString("id-ID", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
+    }
+
+    function msgTimestamp(r) {
+      var raw = r.bi_createdat || r.overriddencreatedon || r.createdon;
+      var t = raw ? Date.parse(raw) : 0;
+      return isNaN(t) ? 0 : t;
+    }
+
+    function msgText(r) {
+      return (r.description && r.description.trim()) ? r.description : (r.bi_replybody || r.subject || "");
+    }
+
+    function loadConversations() {
+      setStatus("Memuat percakapan...");
+      var isDmFilter = state.mode === "dm" ? "bi_isdirectmessage eq true" : "bi_isdirectmessage eq false";
+      var select = [
+        "activityid", "bi_twittid", "bi_isdirectmessage", "bi_isencrypted",
+        "bi_direction", "bi_userid", "bi_username", "bi_userscreenname",
+        "bi_createdat", "overriddencreatedon", "createdon", "description",
+        "bi_replybody", "subject", "bi_tweetlink", "bi_inreplystatusid",
+        "bi_media1", "bi_media2", "bi_media3", "bi_media4",
+        "statecode", "statuscode", "_bi_precontact_value"
+      ].join(",");
+
+      var path = "bi_twitters?$filter=" + encodeURIComponent(isDmFilter) +
+                 "&$select=" + encodeURIComponent(select) +
+                 "&$orderby=createdon desc&$top=500";
+
+      return apiFetch(path).then(function (res) {
+        state.records = (res.data && res.data.value) ? res.data.value : [];
+        buildGroups();
+        renderConvList();
+        if (state.selectedKey) {
+          renderMessages();
+        }
+        setStatus(state.conversations.length + " percakapan (" + state.records.length + " pesan) • " +
+                  new Date().toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit", second: "2-digit" }));
+      }).catch(function (err) {
+        setStatus("Gagal memuat: " + err.message, true);
+      });
+    }
+
+    function buildGroups() {
+      var map = {};
+      state.records.forEach(function (r) {
+        var key = r.bi_userid || r.bi_userscreenname || r.activityid;
+        if (!map[key]) {
+          map[key] = {
+            key: key,
+            userId: r.bi_userid || "",
+            name: r.bi_username || r.bi_userscreenname || key,
+            screenName: r.bi_userscreenname || r.bi_userid || "",
+            precontactId: r._bi_precontact_value || null,
+            tweetLink: r.bi_tweetlink || "",
+            hasEncrypted: false,
+            messages: [],
+            latestTs: 0
+          };
+        }
+        var g = map[key];
+        g.messages.push(r);
+        if (r.bi_isencrypted) g.hasEncrypted = true;
+        if (!g.precontactId && r._bi_precontact_value) g.precontactId = r._bi_precontact_value;
+        if (!g.tweetLink && r.bi_tweetlink) g.tweetLink = r.bi_tweetlink;
+        if (r.bi_username && g.name === key) g.name = r.bi_username;
+        if (r.bi_userscreenname && !g.screenName) g.screenName = r.bi_userscreenname;
+        var ts = msgTimestamp(r);
+        if (ts > g.latestTs) g.latestTs = ts;
+      });
+
+      var list = Object.keys(map).map(function (k) {
+        var g = map[k];
+        g.messages.sort(function (a, b) { return msgTimestamp(a) - msgTimestamp(b); });
+        return g;
+      });
+      list.sort(function (a, b) { return b.latestTs - a.latestTs; });
+      state.conversations = list;
+    }
+
+    function renderConvList() {
+      var q = (el.search.value || "").trim().toLowerCase();
+      el.convList.innerHTML = "";
+      var filtered = state.conversations.filter(function (c) {
+        if (!q) return true;
+        if ((c.name || "").toLowerCase().indexOf(q) >= 0) return true;
+        if ((c.screenName || "").toLowerCase().indexOf(q) >= 0) return true;
+        return c.messages.some(function (m) { return msgText(m).toLowerCase().indexOf(q) >= 0; });
+      });
+
+      if (filtered.length === 0) {
+        el.convList.innerHTML = '<div class="empty-state" style="padding:24px;">Tidak ada percakapan ditemukan.</div>';
+        return;
+      }
+
+      filtered.forEach(function (c) {
+        var last = c.messages[c.messages.length - 1];
+        var item = document.createElement("div");
+        item.className = "conv-item" + (c.key === state.selectedKey ? " active" : "");
+        item.onclick = function () { selectConversation(c.key); };
+
+        var initials = (c.name || "?").trim().slice(0, 2).toUpperCase();
+        var encBadge = state.mode === "dm"
+          ? (c.hasEncrypted ? '<span class="badge badge-e2ee">E2EE</span>' : '<span class="badge badge-plain">Plain</span>')
+          : '<span class="badge badge-count">Mention</span>';
+
+        item.innerHTML =
+          '<div class="avatar">' + escapeHtml(initials) + '</div>' +
+          '<div class="conv-body">' +
+            '<div class="conv-top">' +
+              '<span class="conv-name">' + escapeHtml(c.name) + '</span>' +
+              '<span class="conv-time">' + escapeHtml(fmtTime(last.bi_createdat || last.createdon)) + '</span>' +
+            '</div>' +
+            '<div class="conv-sub">' + escapeHtml((last.bi_direction === DIRECTION_OUT ? "Anda: " : "") + msgText(last)) + '</div>' +
+            '<div class="conv-meta">' + encBadge + ' <span class="badge badge-count">' + c.messages.length + ' pesan</span></div>' +
+          '</div>';
+        el.convList.appendChild(item);
+      });
+    }
+
+    function selectConversation(key) {
+      state.selectedKey = key;
+      state.selectedReplyTweetId = null;
+      renderConvList();
+      renderMessages();
+      loadAnnotationsForSelected();
+    }
+
+    function getSelectedConversation() {
+      return state.conversations.find(function (c) { return c.key === state.selectedKey; }) || null;
+    }
+
+    function renderMessages() {
+      var conv = getSelectedConversation();
+      if (!conv) {
+        el.chatHeader.style.display = "none";
+        el.composer.style.display = "none";
+        el.messages.innerHTML = '<div class="empty-state">Pilih percakapan di panel kiri.</div>';
+        return;
+      }
+
+      el.chatHeader.style.display = "flex";
+      el.composer.style.display = "block";
+      el.hdrName.textContent = conv.name + (conv.screenName ? " (@" + conv.screenName + ")" : "");
+      el.hdrSub.textContent = (state.mode === "dm" ? "Direct Message" : "Mention Publik") +
+                              (conv.userId ? " • User ID: " + conv.userId : "") +
+                              " • " + conv.messages.length + " pesan";
+      if (conv.tweetLink) {
+        el.hdrLink.href = conv.tweetLink;
+        el.hdrLink.style.display = "inline-block";
+      } else {
+        el.hdrLink.style.display = "none";
+      }
+
+      // Default target reply untuk mention = tweet incoming terakhir
+      if (state.mode === "mention" && !state.selectedReplyTweetId) {
+        for (var i = conv.messages.length - 1; i >= 0; i--) {
+          if (conv.messages[i].bi_direction === DIRECTION_IN && conv.messages[i].bi_twittid) {
+            state.selectedReplyTweetId = conv.messages[i].bi_twittid;
+            break;
+          }
+        }
+      }
+      renderReplyContext();
+
+      el.messages.innerHTML = "";
+      conv.messages.forEach(function (m) {
+        var isOut = m.bi_direction === DIRECTION_OUT;
+        var row = document.createElement("div");
+        row.className = "msg-row " + (isOut ? "out" : "in");
+
+        var bubble = document.createElement("div");
+        bubble.className = "bubble";
+        bubble.textContent = msgText(m);
+        row.appendChild(bubble);
+
+        // Lampiran Notes (jika sudah dimuat) + media URL mention (bi_media1..4)
+        var attWrap = document.createElement("div");
+        attWrap.className = "att-list";
+        attWrap.setAttribute("data-att-for", m.activityid);
+        appendMediaUrls(attWrap, m);
+        appendCachedNotes(attWrap, m.activityid);
+        if (attWrap.childNodes.length > 0) row.appendChild(attWrap);
+
+        var meta = document.createElement("div");
+        meta.className = "msg-meta";
+        var statusTxt = isOut
+          ? (m.bi_twittid || m.statecode === 1 ? "✓ Terkirim" : "⏳ Antrian kirim...")
+          : "";
+        var encTag = state.mode === "dm" ? (m.bi_isencrypted ? "E2EE" : "Plain") : "";
+        var metaHtml = escapeHtml(fmtTime(m.bi_createdat || m.createdon));
+        if (encTag) metaHtml += " • " + encTag;
+        if (statusTxt) metaHtml += " • " + statusTxt;
+        if (state.mode === "mention" && !isOut && m.bi_twittid) {
+          metaHtml += ' • <a href="#" data-reply-tweet="' + escapeHtml(m.bi_twittid) + '">Balas tweet ini</a>';
+        }
+        meta.innerHTML = metaHtml;
+        var replyLink = meta.querySelector("a[data-reply-tweet]");
+        if (replyLink) {
+          replyLink.onclick = function (ev) {
+            ev.preventDefault();
+            state.selectedReplyTweetId = m.bi_twittid;
+            renderReplyContext();
+            el.txtReply.focus();
+          };
+        }
+        row.appendChild(meta);
+        el.messages.appendChild(row);
+      });
+
+      el.messages.scrollTop = el.messages.scrollHeight;
+    }
+
+    function appendMediaUrls(container, m) {
+      ["bi_media1", "bi_media2", "bi_media3", "bi_media4"].forEach(function (field) {
+        var url = m[field];
+        if (!url) return;
+        var img = document.createElement("img");
+        img.className = "att-img";
+        img.src = url;
+        img.alt = "Media";
+        img.onclick = function () { openModal(url); };
+        container.appendChild(img);
+      });
+    }
+
+    function appendCachedNotes(container, activityId) {
+      var notes = state.annotationsCache[activityId];
+      if (!notes || notes.length === 0) return;
+      notes.forEach(function (n) {
+        var mime = n.mimetype || "application/octet-stream";
+        var dataUrl = "data:" + mime + ";base64," + n.documentbody;
+        if (mime.indexOf("image/") === 0) {
+          var img = document.createElement("img");
+          img.className = "att-img";
+          img.src = dataUrl;
+          img.alt = n.filename || "Lampiran";
+          img.onclick = function () { openModal(dataUrl); };
+          container.appendChild(img);
+        } else {
+          var a = document.createElement("a");
+          a.className = "att-file";
+          a.href = dataUrl;
+          a.download = n.filename || "lampiran";
+          a.textContent = "📎 " + (n.filename || "Lampiran");
+          container.appendChild(a);
+        }
+      });
+    }
+
+    function loadAnnotationsForSelected() {
+      var conv = getSelectedConversation();
+      if (!conv) return;
+      var missingIds = conv.messages
+        .map(function (m) { return m.activityid; })
+        .filter(function (id) { return id && !(id in state.annotationsCache); });
+      if (missingIds.length === 0) return;
+
+      // Batch query annotations maksimal 20 id sekaligus agar URL tetap pendek
+      var chunk = missingIds.slice(0, 20);
+      var orFilter = chunk.map(function (id) { return "_objectid_value eq " + id; }).join(" or ");
+      var path = "annotations?$filter=(" + encodeURIComponent(orFilter) + ") and isdocument eq true" +
+                 "&$select=annotationid,_objectid_value,filename,mimetype,documentbody";
+
+      apiFetch(path).then(function (res) {
+        chunk.forEach(function (id) { state.annotationsCache[id] = []; });
+        ((res.data && res.data.value) || []).forEach(function (n) {
+          var oid = n._objectid_value;
+          if (!state.annotationsCache[oid]) state.annotationsCache[oid] = [];
+          if (n.documentbody) state.annotationsCache[oid].push(n);
+        });
+        renderMessages();
+      }).catch(function () { /* abaikan bila gagal memuat lampiran */ });
+    }
+
+    function renderReplyContext() {
+      if (state.mode === "mention" && state.selectedReplyTweetId) {
+        el.replyContext.style.display = "flex";
+        el.replyContext.innerHTML =
+          '<span>Membalas Tweet ID: <strong>' + escapeHtml(state.selectedReplyTweetId) + '</strong></span>' +
+          '<a href="#" id="clrReplyTarget" style="color:var(--primary);text-decoration:none;">Hapus target</a>';
+        document.getElementById("clrReplyTarget").onclick = function (e) {
+          e.preventDefault();
+          state.selectedReplyTweetId = null;
+          renderReplyContext();
+        };
+      } else {
+        el.replyContext.style.display = "none";
+      }
+    }
+
+    function renderFileChips() {
+      el.fileChips.innerHTML = "";
+      state.pendingFiles.forEach(function (f, idx) {
+        var chip = document.createElement("span");
+        chip.className = "chip";
+        chip.innerHTML = escapeHtml(f.name) + ' (' + Math.ceil(f.size / 1024) + ' KB) <button type="button">&times;</button>';
+        chip.querySelector("button").onclick = function () {
+          state.pendingFiles.splice(idx, 1);
+          renderFileChips();
+        };
+        el.fileChips.appendChild(chip);
+      });
+    }
+
+    function readFileAsBase64(file) {
+      return new Promise(function (resolve, reject) {
+        var reader = new FileReader();
+        reader.onload = function () {
+          var res = String(reader.result || "");
+          var comma = res.indexOf(",");
+          resolve(comma >= 0 ? res.slice(comma + 1) : res);
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+    }
+
+    function sendReply() {
+      if (state.sending) return;
+      var conv = getSelectedConversation();
+      if (!conv) return;
+      var text = (el.txtReply.value || "").trim();
+      var files = state.pendingFiles.slice();
+      if (!text && files.length === 0) return;
+
+      state.sending = true;
+      el.btnSend.disabled = true;
+      setStatus("Menyimpan balasan ke CRM...");
+
+      var isDm = state.mode === "dm";
+      var body = {
+        bi_isdirectmessage: isDm,
+        bi_direction: DIRECTION_OUT,
+        bi_userid: conv.userId,
+        bi_username: conv.name,
+        bi_userscreenname: conv.screenName,
+        description: text || "[Attachment]",
+        subject: (isDm ? "Outgoing Direct Message - " : "Outgoing Mention Reply - ") + (text || "Attachment").slice(0, 120)
+      };
+      if (!isDm && state.selectedReplyTweetId) {
+        body.bi_inreplystatusid = state.selectedReplyTweetId;
+        body.bi_inreplytoscreenname = conv.screenName;
+      }
+
+      // Bila ada lampiran: buat bi_twitter dulu tanpa bi_replybody -> upload Notes ->
+      // baru PATCH bi_replybody agar saat Plugin CRM terpicu, lampiran sudah tersedia!
+      if (files.length === 0) {
+        body.bi_replybody = text;
+      }
+
+      apiFetch("bi_twitters", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body)
+      }).then(function (res) {
+        var entityIdHeader = res.headers.get("OData-EntityId") || "";
+        var match = entityIdHeader.match(/\(([^)]+)\)/);
+        var newId = match ? match[1].replace(/'/g, "") : null;
+
+        if (files.length === 0 || !newId) return null;
+
+        var uploadChain = Promise.resolve();
+        files.forEach(function (f) {
+          uploadChain = uploadChain.then(function () {
+            return readFileAsBase64(f).then(function (b64) {
+              return apiFetch("annotations", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  subject: "Attachment - " + f.name,
+                  filename: f.name,
+                  mimetype: f.type || "application/octet-stream",
+                  documentbody: b64,
+                  isdocument: true,
+                  "objectid_bi_twitter@odata.bind": "/bi_twitters(" + newId + ")"
+                })
+              });
+            });
+          });
+        });
+
+        return uploadChain.then(function () {
+          return apiFetch("bi_twitters(" + newId + ")", {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ bi_replybody: text || "[Attachment]" })
+          });
+        });
+      }).then(function () {
+        el.txtReply.value = "";
+        state.pendingFiles = [];
+        renderFileChips();
+        return loadConversations();
+      }).catch(function (err) {
+        setStatus("Gagal kirim balasan: " + err.message, true);
+      }).finally(function () {
+        state.sending = false;
+        el.btnSend.disabled = false;
+      });
+    }
+
+    function openModal(src) {
+      el.imgModalSrc.src = src;
+      el.imgModal.classList.add("open");
+    }
+
+    function escapeHtml(s) {
+      return String(s || "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
+    }
+
+    function setupAutoRefresh() {
+      if (state.timer) clearInterval(state.timer);
+      if (el.chkAuto.checked) {
+        state.timer = setInterval(function () {
+          if (!state.sending) loadConversations();
+        }, 15000);
+      }
+    }
+
+    // Event bindings
+    el.tabDm.onclick = function () {
+      state.mode = "dm";
+      state.selectedKey = null;
+      el.tabDm.classList.add("active");
+      el.tabMention.classList.remove("active");
+      loadConversations();
+    };
+    el.tabMention.onclick = function () {
+      state.mode = "mention";
+      state.selectedKey = null;
+      el.tabMention.classList.add("active");
+      el.tabDm.classList.remove("active");
+      loadConversations();
+    };
+    el.search.oninput = renderConvList;
+    el.btnRefresh.onclick = loadConversations;
+    el.chkAuto.onchange = setupAutoRefresh;
+    el.btnAttach.onclick = function () { el.fileInput.click(); };
+    el.fileInput.onchange = function () {
+      Array.prototype.slice.call(el.fileInput.files || []).forEach(function (f) {
+        state.pendingFiles.push(f);
+      });
+      el.fileInput.value = "";
+      renderFileChips();
+    };
+    el.btnSend.onclick = sendReply;
+    el.txtReply.onkeydown = function (e) {
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        sendReply();
+      }
+    };
+
+    setupAutoRefresh();
+    loadConversations();
+  })();
+  </script>
+</body>
+</html>

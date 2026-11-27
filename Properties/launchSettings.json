@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "SocialMediaIntegration.Chat": {
+      "commandName": "Project",
+      "commandLineArgs": "sync --dry-run"
+    }
+  }
+}

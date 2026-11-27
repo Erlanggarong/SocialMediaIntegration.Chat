@@ -1,0 +1,27 @@
+# Build artifacts (.NET)
+bin/
+obj/
+publish/
+
+# Visual Studio / IDE
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+.idea/
+.vscode/
+
+# Secrets & local key material (NEVER commit)
+*.dat
+*.dat.bak*
+.env
+.env.*
+appsettings.Local.json
+secrets.json
+
+# Logs & temp
+*.log
+*.tmp
+Thumbs.db
+.DS_Store
